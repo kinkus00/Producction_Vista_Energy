@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vista Energy — Net Production Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --p-900:#0D0D38; --p-800:#15154a; --p-700:#001EAF; --p-500:#2044DC;
+  --p-400:#4571FF; --p-200:#88AAFF;
+  --s-orange:#FF6B06; --s-red:#F8485E; --s-cyan:#46E8E0; --s-green:#0aa86a;
+  --surface:#0D0D38; --panel:#15154a; --panel-2:#1b1d5c; --border:#2a2e72;
+  --text-primary:#EEF1FF; --text-secondary:#88AAFF; --text-muted:#6a73b8;
+  --font-display:'TG Gaido Grotesk','Space Grotesk',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--font-body);background:var(--surface);color:var(--text-primary);font-size:16px;line-height:1.55;font-variant-numeric:tabular-nums}
+.wrap{max-width:1360px;margin:0 auto;padding:40px 32px 80px}
+header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:32px;margin-bottom:36px;padding-bottom:28px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+header .title-block h1{font-family:var(--font-display);font-size:30px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+header .title-block .subtitle{font-weight:400;font-size:18px;color:var(--text-secondary);margin:0}
+header .title-block .meta{margin-top:10px;font-size:12px;color:var(--text-muted);letter-spacing:.02em;text-transform:uppercase}
+.tag{display:inline-block;padding:4px 10px;font-size:12px;font-weight:600;border-radius:100px;background:rgba(32,68,220,.25);color:var(--p-200);border:1px solid rgba(136,170,255,.25)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.kpi .label{font-size:12px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.kpi .value{font-family:var(--font-display);font-size:28px;font-weight:600;line-height:1.1}
+.kpi .sub{margin-top:6px;font-size:12px;color:var(--text-muted)}
+.kpi .delta{font-weight:600}.kpi .delta.up{color:var(--s-green)}.kpi .delta.down{color:var(--s-red)}
+.section{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px 28px;margin-bottom:24px}
+.section h2{font-family:var(--font-display);font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.section h2+.desc{font-size:14px;color:var(--text-secondary);margin:0 0 20px}
+.chart-wrap{position:relative;width:100%}
+.chart-wrap.h480{height:480px}.chart-wrap.h420{height:420px}.chart-wrap.h360{height:360px}.chart-wrap.h320{height:320px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+table th{text-align:left;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;padding:10px 8px;border-bottom:1px solid var(--border);font-size:11px;background:var(--panel-2)}
+table td{padding:9px 8px;border-bottom:1px solid rgba(42,46,114,.5)}
+table td.num,table th.num{text-align:right}
+table tbody tr:hover{background:rgba(32,68,220,.08)}
+.warn-card{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--s-orange);border-radius:8px;padding:14px 18px;margin-bottom:12px}
+.warn-card.critical{border-left-color:var(--s-red)}.warn-card.info{border-left-color:var(--p-400)}
+.warn-card .head{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+.warn-card .head .badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;letter-spacing:.02em;text-transform:uppercase}
+.warn-card .head .badge.warn{background:rgba(255,107,6,.2);color:var(--s-orange)}
+.warn-card .head .badge.crit{background:rgba(248,72,94,.2);color:var(--s-red)}
+.warn-card .head .badge.info{background:rgba(69,113,255,.2);color:var(--p-200)}
+.warn-card .head .title{font-weight:600;font-size:14px}
+.warn-card .body{font-size:13px;color:var(--text-secondary);line-height:1.55}
+.warn-card .body code{background:var(--panel-2);padding:1px 6px;border-radius:3px;font-size:12px;color:var(--s-cyan)}
+details.checklist{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-top:16px}
+details.checklist summary{font-family:var(--font-display);font-size:18px;font-weight:600;cursor:pointer;user-select:none}
+details.checklist ul{margin:14px 0 4px;padding-left:20px;color:var(--text-secondary);font-size:13px}
+details.checklist li{margin:4px 0}details.checklist li::marker{color:var(--s-cyan)}
+footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="title-block">
+    <h1>Vista Energy — Net Production Dashboard</h1>
+    <p class="subtitle">Monthly net production (boe/d), fleet activity, and WI-adjusted operator breakdown</p>
+    <div class="meta">Source: Argentina SE capítulo IV · Window: <span id="hdr-window"></span> · Units: boe/d · Factor: 1 m³ = 6.2898 boe</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;max-width:480px;justify-content:flex-end">
+    <span class="tag">Vista Energy Argentina SAU</span>
+    <span class="tag">Credit / Fixed Income View</span>
+    <span class="tag">WI-adjusted</span>
+  </div>
+</header>
+
+<section class="kpis">
+  <div class="kpi"><div class="label">Total Net Production — <span class="hdr-latest"></span></div>
+    <div class="value"><span id="kpi-total"></span> <span style="font-size:14px;color:var(--text-muted);font-weight:500">boe/d</span></div>
+    <div class="sub">vs. Jan-2024: <span class="delta up" id="kpi-growth"></span></div></div>
+  <div class="kpi"><div class="label">Net Operated · Non-Operated</div>
+    <div class="value"><span id="kpi-op"></span> <span style="color:var(--text-muted);font-size:20px">·</span> <span id="kpi-nonop" style="color:var(--s-orange)"></span></div>
+    <div class="sub">operated / non-operated boe/d</div></div>
+  <div class="kpi"><div class="label">Oil Mix</div>
+    <div class="value"><span id="kpi-oilmix"></span>%</div>
+    <div class="sub"><span id="kpi-oilvol"></span> oil · <span id="kpi-gasvol"></span> gas</div></div>
+  <div class="kpi"><div class="label">Active Wells</div>
+    <div class="value" id="kpi-active"></div>
+    <div class="sub">in-scope producing wells, <span class="hdr-latest"></span></div></div>
+</section>
+
+<!-- CHART 1: Total production by field (stacked) + %oil line -->
+<section class="section">
+  <h2>Total Net Production — by Field</h2>
+  <p class="desc">Stacked bars by field (net, WI-adjusted boe/d). Orange line = % oil in total production.</p>
+  <div class="chart-wrap h480"><canvas id="chart1"></canvas></div>
+</section>
+
+<!-- CHART 2: Operated (oil+gas) -->
+<div class="grid-2">
+  <section class="section">
+    <h2>Net Operated Production</h2>
+    <p class="desc">Vista-operated assets, after asset- and well-level WI.</p>
+    <div class="chart-wrap h360"><canvas id="chart2"></canvas></div>
+  </section>
+
+  <!-- CHART 3: Non-Operated (oil+gas) -->
+  <section class="section">
+    <h2>Net Non-Operated Production</h2>
+    <p class="desc">Aconcagua + PAE (Acambuco) + YPF (La Amarga Chica).</p>
+    <div class="chart-wrap h360"><canvas id="chart3"></canvas></div>
+  </section>
+</div>
+
+<!-- CHART 4: Non-Op stacked by partner -->
+<section class="section">
+  <h2>Non-Operated Detail — by Partner</h2>
+  <p class="desc">Stacked by counterparty (WI-adjusted boe/d). YPF LAC enters scope from Apr-2025.</p>
+  <div class="chart-wrap h420"><canvas id="chart4"></canvas></div>
+</section>
+
+<!-- CHART 5: Active wells by field (line) -->
+<section class="section">
+  <h2>Active Wells by Field</h2>
+  <p class="desc">Monthly count of unique wells with non-zero production, per field. Legend shows current WI.</p>
+  <div class="chart-wrap h480"><canvas id="chart5"></canvas></div>
+</section>
+
+<!-- CHART 6: New wells (stacked bar by field) -->
+<div class="grid-2">
+  <section class="section">
+    <h2>Active Wells — Total</h2>
+    <p class="desc">Consolidated unique producing wells across all Vista scope.</p>
+    <div class="chart-wrap h320"><canvas id="chart6a"></canvas></div>
+  </section>
+
+  <section class="section">
+    <h2>New Wells Brought Online</h2>
+    <p class="desc">First-ever-active month. Jan-2024 starting population excluded.</p>
+    <div class="chart-wrap h320"><canvas id="chart6b"></canvas></div>
+  </section>
+</div>
+
+<!-- TABLE: New wells by field with avg IP -->
+<section class="section">
+  <h2>New Wells by Field — Detailed Table</h2>
+  <p class="desc">First-activation events by Field with average initial production (boe/d per well in debut month).</p>
+  <div style="max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:8px">
+    <table id="newTable">
+      <thead><tr><th>Period</th><th>Field</th><th class="num">New Wells</th><th class="num">Avg IP (boe/d)</th><th class="num">Total IP (boe/d)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ASSUMPTIONS & WARNINGS -->
+<section class="section" id="assumptions">
+  <h2>Assumptions &amp; Warnings</h2>
+  <p class="desc">All material departures, WI overrides, and data flags.</p>
+
+  <div class="warn-card info"><div class="head"><span class="badge info">Formula</span><span class="title">BOE conversion applied as specified</span></div>
+    <div class="body">Oil boe/d = <code>Σ(prod_pet) × 6.2898 × WI ÷ days</code>. Gas boe/d = <code>Σ(prod_gas) × 6.2898 × WI ÷ days</code>. Argentine SE <code>prod_pet</code> in m³, <code>prod_gas</code> in Mm³. Actual calendar days per month. No interpolation or synthetic data.</div></div>
+
+  <div class="warn-card info"><div class="head"><span class="badge info">Columns</span><span class="title">Column mapping — CSV vs. spec</span></div>
+    <div class="body">"Column J/K" → <code>prod_pet</code> / <code>prod_gas</code>. "Column C (Field)" → <code>areapermisoconcesion</code> for all non-operated (Aconcagua, PAE). Each concession may encompass multiple <code>areayacimiento</code> — e.g. ENTRE LOMAS concession includes Charco Bayo, El Caracol, Borde Mocho, Piedras Blancas, Lomas de Ocampo, Los Alamos, La Pista + Entre Lomas proper.</div></div>
+
+  <div class="warn-card info"><div class="head"><span class="badge info">Field filter</span><span class="title">JAGÜEL DE LOS MACHOS RN — Aconcagua concession</span></div>
+    <div class="body"><code>JAGÜEL DE LOS MACHOS RN</code> is an <code>areapermisoconcesion</code> operated by Aconcagua, containing 7 yacimientos: Tapera Avendaño, Las Lagunas (+Sur, Norte, Este), Puesto Morales, and Médano. All included in non-op bucket.</div></div>
+
+  <div class="warn-card critical"><div class="head"><span class="badge crit">WI override</span><span class="title">YPF / La Amarga Chica — pre-Apr-2025 excluded</span></div>
+    <div class="body">WI = 0% before Apr-2025. All LAC production before Apr-2025 omitted. From Apr-2025: 50% WI on oil and gas.</div></div>
+
+  <div class="warn-card critical"><div class="head"><span class="badge crit">WI override</span><span class="title">Aconcagua — time-varying WI schedule</span></div>
+    <div class="body">Base WI = 20% (oil &amp; gas) from Sep-2025. <strong>Q4-2024 to Aug-2025:</strong> oil = 40%, gas = 0% (oil-only). <strong>Prior to Q4-2024:</strong> oil = 40%, gas = 40%. Filtered on <code>areapermisoconcesion</code>. Verified vs. user June 2025 numbers: 2,308.5 boe/d (user: 2,308.3 ✓).</div></div>
+
+  <div class="warn-card critical"><div class="head"><span class="badge crit">WI override</span><span class="title">Well-level overrides — 40 BPO wells (Trafigura JV), pre-2025</span></div>
+    <div class="body">Pre-2025: <strong>28 wells at 80%</strong> (162590–593, 162742–745, 163138–141, 163249–251, 163392–395, 163491–494, 163810, 163873–876) and <strong>12 wells at 75%</strong> (164300–303, 164445–448, 164622–625). From 2025: asset-level 100% resumes.</div></div>
+
+  <div class="warn-card"><div class="head"><span class="badge warn">Coverage</span><span class="title">March 2026 partial — truncated</span></div>
+    <div class="body">Vista/YPF/PAE had not filed March 2026. Dashboard ends at Feb-2026.</div></div>
+
+  <div class="warn-card"><div class="head"><span class="badge warn">Methodology</span><span class="title">"New wells" = first-ever-active in dataset</span></div>
+    <div class="body">Jan-2024 starting population (376 wells) excluded. For YPF-LAC, wells active before Apr-2025 are NOT counted as "new" when entering Vista's scope. Avg IP = average net boe/d of new wells in their debut month.</div></div>
+
+  <details class="checklist" open>
+    <summary>Compliance checklist</summary>
+    <ul>
+      <li>Oil &amp; gas separate: <code>prod_pet × 6.2898 × WI ÷ days</code> and <code>prod_gas × 6.2898 × WI ÷ days</code>.</li>
+      <li>Actual calendar days per month.</li>
+      <li>WI applied at row level before aggregation.</li>
+      <li>Operated: Coirón Amargo Norte = 96.77%; Águila Mora = 98%; all other = 100% (from 2025).</li>
+      <li>Pre-2025 BPO well overrides: 28@80%, 12@75%.</li>
+      <li>Aconcagua: 40/40 (pre-Q4-2024) → 40/0 (Q4-2024 to Aug-2025) → 20/20 (Sep-2025+). Concession filter.</li>
+      <li>PAE ACAMBUCO: 1.5%.</li>
+      <li>YPF LAC: 50% from Apr-2025; excluded before.</li>
+      <li>No fabricated data. March 2026 excluded (partial).</li>
+    </ul>
+  </details>
+</section>
+
+<footer>
+  Generated from Argentina Secretaría de Energía — <em>Producción de pozos de gas y petróleo</em> (2024–2026). WI-adjusted net production for fixed-income / credit analysis. Deviations from Vista's reported metrics may arise from WI assumptions, fiscal vs. calendar cutoffs, energy-content BOE factors, and commingled-stream allocation.
+<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text-secondary);">
+    Made by: <strong style="color:var(--text-primary)">Joaquim Celidonio</strong> | E-mail: <a href="mailto:Joaquim.celidonio@patria.com" style="color:var(--p-400);text-decoration:none">Joaquim.celidonio@patria.com</a>
+  </div>
+</footer>
+
+</div>
+
+<script>
+const D = {"months": ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02"], "production_by_field": {"BAJADA DEL PALO OESTE": [{"oil": 34206.473956007416, "gas": 3757.683724420645, "total": 37964.15768042806}, {"oil": 31232.089230619655, "gas": 3451.1653924531033, "total": 34683.25462307276}, {"oil": 33293.13044439871, "gas": 3534.640639668387, "total": 36827.77108406709}, {"oil": 39701.274669451996, "gas": 4185.705923443, "total": 43886.980592895}, {"oil": 40556.383292018705, "gas": 4400.011298855806, "total": 44956.394590874515}, {"oil": 45184.274234583, "gas": 5535.6662934099995, "total": 50719.940527993}, {"oil": 44829.837251163866, "gas": 5622.79053008129, "total": 50452.62778124516}, {"oil": 42502.08326303322, "gas": 4655.810099702903, "total": 47157.893362736126}, {"oil": 48464.973867959, "gas": 4756.391774002, "total": 53221.365641961}, {"oil": 53279.18829176226, "gas": 5829.084141199354, "total": 59108.27243296161}, {"oil": 52884.437681999, "gas": 6090.938370571999, "total": 58975.376052570995}, {"oil": 53608.72982374161, "gas": 5866.530698830645, "total": 59475.26052257226}, {"oil": 49885.4274142258, "gas": 5909.654632838709, "total": 55795.08204706451}, {"oil": 44143.03796901428, "gas": 5394.228848721428, "total": 49537.26681773571}, {"oil": 44057.80435298709, "gas": 5024.508122167742, "total": 49082.31247515483}, {"oil": 46333.60057238, "gas": 4855.307118639999, "total": 51188.907691019995}, {"oil": 48310.34706044516, "gas": 5505.823704948387, "total": 53816.170765393545}, {"oil": 45217.42943718, "gas": 5191.95922894, "total": 50409.388666119994}, {"oil": 44394.05746678064, "gas": 5094.047745174194, "total": 49488.10521195483}, {"oil": 48822.87547138064, "gas": 5445.651217316128, "total": 54268.52668869677}, {"oil": 57669.08463183999, "gas": 6548.88692568, "total": 64217.971557519995}, {"oil": 55653.12349292903, "gas": 6439.512660154838, "total": 62092.63615308387}, {"oil": 49932.3478005, "gas": 5924.387779199999, "total": 55856.7355797}, {"oil": 48982.44323365161, "gas": 5614.313421696774, "total": 54596.756655348385}, {"oil": 47729.15594636129, "gas": 5505.727937670968, "total": 53234.88388403226}, {"oil": 54880.77314680714, "gas": 6283.817726292857, "total": 61164.590873099994}], "LA AMARGA CHICA": [{"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 29860.2258724, "gas": 3735.6547887999996, "total": 33595.8806612}, {"oil": 33531.27785487097, "gas": 3757.5062303225804, "total": 37288.78408519355}, {"oil": 37276.0552208, "gas": 4318.3051703, "total": 41594.360391099995}, {"oil": 37653.687846677414, "gas": 4350.400024548387, "total": 42004.087871225805}, {"oil": 36456.051086612904, "gas": 4240.515189580645, "total": 40696.566276193545}, {"oil": 39335.087293699995, "gas": 4567.860323399999, "total": 43902.9476171}, {"oil": 44180.944028419355, "gas": 5033.084771709677, "total": 49214.02880012903}, {"oil": 42647.5444208, "gas": 5001.3397115, "total": 47648.884132299994}, {"oil": 43486.26402396774, "gas": 5467.399519645161, "total": 48953.6635436129}, {"oil": 42009.54173651613, "gas": 5406.232229129032, "total": 47415.77396564516}, {"oil": 40582.079380071424, "gas": 5308.182363, "total": 45890.26174307142}], "BAJADA DEL PALO ESTE": [{"oil": 3000.19442643871, "gas": 87.09587508387095, "total": 3087.29030152258}, {"oil": 3563.431316917241, "gas": 172.96581287586207, "total": 3736.397129793103}, {"oil": 3375.4434886451613, "gas": 167.06987049677417, "total": 3542.513359141936}, {"oil": 2924.15967866, "gas": 158.98475867999997, "total": 3083.1444373399995}, {"oil": 6935.869589496774, "gas": 276.2879866645161, "total": 7212.15757616129}, {"oil": 6072.157405159999, "gas": 132.20090334, "total": 6204.358308499999}, {"oil": 5424.030942851612, "gas": 168.25093261935484, "total": 5592.281875470968}, {"oil": 5295.715370709677, "gas": 225.7877911548387, "total": 5521.503161864515}, {"oil": 7637.428227439999, "gas": 313.91301568, "total": 7951.3412431199995}, {"oil": 8975.952219619354, "gas": 435.03564017419353, "total": 9410.987859793548}, {"oil": 8199.55562052, "gas": 392.90577523999997, "total": 8592.46139576}, {"oil": 9242.300902006451, "gas": 578.6287307225806, "total": 9820.929632729032}, {"oil": 12963.114062303226, "gas": 654.0823889032257, "total": 13617.196451206451}, {"oil": 13267.957958357141, "gas": 623.2747021285714, "total": 13891.232660485713}, {"oil": 12452.486388348387, "gas": 586.3799961870967, "total": 13038.866384535482}, {"oil": 11589.005979759999, "gas": 532.4273767999999, "total": 12121.433356559999}, {"oil": 11660.672190909676, "gas": 563.2276481806451, "total": 12223.899839090322}, {"oil": 14994.266799599998, "gas": 684.83782686, "total": 15679.104626459999}, {"oil": 14443.956574548385, "gas": 694.3099207354838, "total": 15138.26649528387}, {"oil": 12602.45814768387, "gas": 731.3339153999999, "total": 13333.79206308387}, {"oil": 12520.94090588, "gas": 569.38456432, "total": 13090.3254702}, {"oil": 11919.531547567742, "gas": 576.8966009612902, "total": 12496.42814852903}, {"oil": 13583.527976919999, "gas": 746.27449666, "total": 14329.802473579999}, {"oil": 12861.389329799998, "gas": 739.276918316129, "total": 13600.666248116127}, {"oil": 11854.981359135483, "gas": 758.2433029741935, "total": 12613.224662109677}, {"oil": 11488.557364585713, "gas": 742.5299840357143, "total": 12231.087348621428}], "AGUADA FEDERAL": [{"oil": 3159.3712066258063, "gas": 533.8258766322581, "total": 3693.197083258064}, {"oil": 3111.7258596827587, "gas": 581.9255724206896, "total": 3693.6514321034483}, {"oil": 2832.372823393548, "gas": 530.4425729225807, "total": 3362.815396316129}, {"oil": 2515.0832469399998, "gas": 482.13853886, "total": 2997.2217858}, {"oil": 2660.045694580645, "gas": 458.91415573548386, "total": 3118.9598503161287}, {"oil": 2836.95893976, "gas": 441.59092384, "total": 3278.5498635999998}, {"oil": 6628.78735072258, "gas": 933.8837361096773, "total": 7562.671086832257}, {"oil": 6954.7765254, "gas": 1021.9305883741935, "total": 7976.707113774193}, {"oil": 5705.374007959999, "gas": 956.1607197999999, "total": 6661.534727759999}, {"oil": 5393.873177922581, "gas": 898.2110339612902, "total": 6292.084211883871}, {"oil": 4884.51149868, "gas": 739.345024, "total": 5623.856522679999}, {"oil": 4540.45951983871, "gas": 781.0608713032258, "total": 5321.520391141936}, {"oil": 4024.578036812903, "gas": 670.0807995483871, "total": 4694.65883636129}, {"oil": 4051.9832823642855, "gas": 750.66089835, "total": 4802.6441807142855}, {"oil": 3643.1544199741934, "gas": 687.6200082967741, "total": 4330.774428270967}, {"oil": 3548.85905044, "gas": 641.86423598, "total": 4190.72328642}, {"oil": 3194.3846971548387, "gas": 608.1633996580645, "total": 3802.548096812903}, {"oil": 2909.3952117999997, "gas": 580.10972162, "total": 3489.50493342}, {"oil": 2988.9610465354835, "gas": 571.5924734903225, "total": 3560.5535200258064}, {"oil": 2342.6167348064514, "gas": 474.7043942903225, "total": 2817.321129096774}, {"oil": 4864.73825442, "gas": 768.88339242, "total": 5633.62164684}, {"oil": 8261.158246354838, "gas": 1197.0327363677418, "total": 9458.19098272258}, {"oil": 5950.44558196, "gas": 900.1550826399999, "total": 6850.6006646}, {"oil": 5329.926404496774, "gas": 809.5220134064516, "total": 6139.448417903225}, {"oil": 4790.717473548387, "gas": 744.829797232258, "total": 5535.547270780645}, {"oil": 4911.857572285714, "gas": 874.3181417142856, "total": 5786.175714}], "MEDANO DE LA MORA": [{"oil": 3495.8351301677417, "gas": 356.2250548645161, "total": 3852.060185032258}, {"oil": 2933.3497343586205, "gas": 220.7600510689655, "total": 3154.1097854275863}, {"oil": 2509.839183677419, "gas": 86.6953568516129, "total": 2596.5345405290323}, {"oil": 2707.71738732, "gas": 270.3010101, "total": 2978.0183974199995}, {"oil": 3273.32128136129, "gas": 221.63855212258062, "total": 3494.9598334838706}, {"oil": 2662.91094872, "gas": 257.67255932, "total": 2920.5835080399997}, {"oil": 1872.2516938258063, "gas": 309.90392421290323, "total": 2182.1556180387097}, {"oil": 2017.4277850064516, "gas": 288.10408610322577, "total": 2305.5318711096775}, {"oil": 2332.26140422, "gas": 410.61701339999996, "total": 2742.87841762}, {"oil": 2448.4797499161286, "gas": 341.9549189419355, "total": 2790.4346688580645}, {"oil": 2892.03829904, "gas": 580.24914552, "total": 3472.2874445599996}, {"oil": 3169.400799967742, "gas": 682.2391858451613, "total": 3851.639985812903}, {"oil": 2879.0630232774192, "gas": 337.2647571096774, "total": 3216.3277803870965}, {"oil": 2918.637249235714, "gas": 467.2510465071428, "total": 3385.888295742857}, {"oil": 2695.9588294064515, "gas": 413.2753669354838, "total": 3109.2341963419353}, {"oil": 2610.28565974, "gas": 408.62146951999995, "total": 3018.90712926}, {"oil": 2752.981750412903, "gas": 445.2920721096774, "total": 3198.2738225225803}, {"oil": 2689.3937323, "gas": 339.13364606, "total": 3028.52737836}, {"oil": 2555.135076929032, "gas": 352.3107702967742, "total": 2907.445847225806}, {"oil": 2137.4371690064513, "gas": 276.7739244387096, "total": 2414.211093445161}, {"oil": 2012.3753848, "gas": 361.24250271999995, "total": 2373.61788752}, {"oil": 2262.8014046709677, "gas": 351.7461085741935, "total": 2614.547513245161}, {"oil": 2411.5625736399998, "gas": 355.95655479999994, "total": 2767.51912844}, {"oil": 2146.260135232258, "gas": 310.46797724516125, "total": 2456.728112477419}, {"oil": 2028.3497183612903, "gas": 287.2166156129032, "total": 2315.566333974193}, {"oil": 2004.4828838571427, "gas": 249.77267535, "total": 2254.2555592071426}], "ENTRE LOMAS": [{"oil": 1216.7479394084053, "gas": 1161.2323461265885, "total": 2377.9802855349935}, {"oil": 1211.7145842816415, "gas": 1231.985467266135, "total": 2443.700051547776}, {"oil": 1225.1727268344669, "gas": 1229.904139814812, "total": 2455.076866649279}, {"oil": 1189.5147202467904, "gas": 1287.9999919957622, "total": 2477.5147122425524}, {"oil": 1108.9279563074717, "gas": 991.5667615679515, "total": 2100.4947178754232}, {"oil": 1114.0676873194643, "gas": 1011.0157888518128, "total": 2125.083476171277}, {"oil": 1097.4190717571612, "gas": 949.6691303822942, "total": 2047.0882021394555}, {"oil": 1093.6064365196378, "gas": 967.1532316329733, "total": 2060.759668152611}, {"oil": 1104.8874868378837, "gas": 876.4929708270832, "total": 1981.3804576649668}, {"oil": 1060.6046318632903, "gas": 0.0, "total": 1060.6046318632903}, {"oil": 1015.1526929207586, "gas": 0.0, "total": 1015.1526929207586}, {"oil": 1062.9079881419243, "gas": 0.0, "total": 1062.9079881419243}, {"oil": 1056.3147440973933, "gas": 0.0, "total": 1056.3147440973933}, {"oil": 1035.7586127879465, "gas": 0.0, "total": 1035.7586127879465}, {"oil": 1012.5297551344386, "gas": 0.0, "total": 1012.5297551344386}, {"oil": 1020.3478901983659, "gas": 0.0, "total": 1020.3478901983659}, {"oil": 989.7832031457089, "gas": 0.0, "total": 989.7832031457089}, {"oil": 998.1881693917086, "gas": 0.0, "total": 998.1881693917086}, {"oil": 1008.3358209495935, "gas": 0.0, "total": 1008.3358209495935}, {"oil": 983.9568553472636, "gas": 0.0, "total": 983.9568553472636}, {"oil": 501.6379263613381, "gas": 351.3613871956353, "total": 852.9993135569733}, {"oil": 497.2808584497048, "gas": 314.9627282717842, "total": 812.243586721489}, {"oil": 429.65938227856776, "gas": 300.552107293338, "total": 730.2114895719058}, {"oil": 501.1244825552049, "gas": 306.5931223485274, "total": 807.7176049037323}, {"oil": 487.76030416105414, "gas": 314.4811472049455, "total": 802.2414513659996}, {"oil": 415.2679706211142, "gas": 262.76304699713563, "total": 678.0310176182498}], "AGUILA MORA": [{"oil": 968.9146189501935, "gas": 373.6991053428387, "total": 1342.6137242930322}, {"oil": 890.0624102768276, "gas": 366.44557421089655, "total": 1256.5079844877241}, {"oil": 842.175538512, "gas": 379.44713849225803, "total": 1221.6226770042579}, {"oil": 767.2154968016, "gas": 347.1086260488, "total": 1114.3241228504}, {"oil": 700.1018079936774, "gas": 265.2327176655484, "total": 965.3345256592258}, {"oil": 627.5079352079999, "gas": 234.42816732720001, "total": 861.9361025351999}, {"oil": 572.6813068552257, "gas": 222.802696712129, "total": 795.4840035673546}, {"oil": 557.6146915296774, "gas": 214.9386206411613, "total": 772.5533121708387}, {"oil": 524.5598224019999, "gas": 208.5946210964, "total": 733.1544434983999}, {"oil": 426.25976628967743, "gas": 145.8693651104516, "total": 572.129131400129}, {"oil": 494.3783932163999, "gas": 357.46846757159994, "total": 851.8468607879997}, {"oil": 457.46811854167737, "gas": 273.4443640265806, "total": 730.912482568258}, {"oil": 421.7117255318709, "gas": 250.50691210954835, "total": 672.2186376414193}, {"oil": 424.06828533299995, "gas": 210.43183184099996, "total": 634.5001171739999}, {"oil": 553.0944882092903, "gas": 232.07972157096773, "total": 785.174209780258}, {"oil": 452.52090218719997, "gas": 211.88065162879997, "total": 664.401553816}, {"oil": 411.0539637770322, "gas": 191.1111660820645, "total": 602.1651298590966}, {"oil": 392.0990748443999, "gas": 153.748751772, "total": 545.8478266164}, {"oil": 402.1871434424516, "gas": 147.9156155996129, "total": 550.1027590420645}, {"oil": 374.74638950632254, "gas": 135.81945368554838, "total": 510.56584319187095}, {"oil": 364.6534361008, "gas": 106.5859025, "total": 471.2393386008}, {"oil": 337.8574104712258, "gas": 132.61615999393547, "total": 470.4735704651613}, {"oil": 328.56216534679993, "gas": 96.9359487712, "total": 425.4981141179999}, {"oil": 333.2865032469677, "gas": 95.40386900709676, "total": 428.69037225406447}, {"oil": 327.0342148025806, "gas": 84.6011537388387, "total": 411.6353685414193}, {"oil": 321.30971565, "gas": 73.3956762, "total": 394.70539184999996}], "25 DE MAYO - MEDANITO SUD ESTE RN": [{"oil": 763.4451113874271, "gas": 190.85693234674875, "total": 954.3020437341759}, {"oil": 764.9607584764883, "gas": 195.95355067854072, "total": 960.914309155029}, {"oil": 765.9207523038259, "gas": 203.4437839103277, "total": 969.3645362141536}, {"oil": 777.4228707787224, "gas": 210.67727032687685, "total": 988.1001411055993}, {"oil": 728.6934353964242, "gas": 212.9400833569324, "total": 941.6335187533566}, {"oil": 686.3942285990864, "gas": 194.7784170637484, "total": 881.1726456628348}, {"oil": 677.451825556015, "gas": 192.87748801277377, "total": 870.3293135687888}, {"oil": 650.0733641453149, "gas": 193.226547718632, "total": 843.2999118639469}, {"oil": 643.6391174055453, "gas": 187.79109928899987, "total": 831.4302166945453}, {"oil": 641.4666202957962, "gas": 0.0, "total": 641.4666202957962}, {"oil": 646.2593847137977, "gas": 0.0, "total": 646.2593847137977}, {"oil": 644.2357413137196, "gas": 0.0, "total": 644.2357413137196}, {"oil": 647.6367817438769, "gas": 0.0, "total": 647.6367817438769}, {"oil": 617.0714740413619, "gas": 0.0, "total": 617.0714740413619}, {"oil": 601.5172482408746, "gas": 0.0, "total": 601.5172482408746}, {"oil": 650.6045250265506, "gas": 0.0, "total": 650.6045250265506}, {"oil": 640.0657695398172, "gas": 0.0, "total": 640.0657695398172}, {"oil": 630.0939695357108, "gas": 0.0, "total": 630.0939695357108}, {"oil": 630.5148654893621, "gas": 0.0, "total": 630.5148654893621}, {"oil": 632.1223124116652, "gas": 0.0, "total": 632.1223124116652}, {"oil": 318.4295680241761, "gas": 92.78685624625643, "total": 411.2164242704325}, {"oil": 312.35253919603525, "gas": 89.72568729232471, "total": 402.07822648836}, {"oil": 310.3609966655729, "gas": 82.57999242965437, "total": 392.9409890952272}, {"oil": 311.74129222679676, "gas": 90.72587643502288, "total": 402.46716866181964}, {"oil": 298.1298737757005, "gas": 89.72216788643281, "total": 387.85204166213333}, {"oil": 296.28250375062646, "gas": 83.96927706752757, "total": 380.25178081815403}], "JAG\u00dcEL DE LOS MACHOS RN": [{"oil": 752.3543399167045, "gas": 200.26822747349829, "total": 952.6225673902028}, {"oil": 740.80109341128, "gas": 201.87889836589446, "total": 942.6799917771745}, {"oil": 748.6323316866166, "gas": 198.33727787461888, "total": 946.9696095612354}, {"oil": 746.3609342788513, "gas": 197.02546908083863, "total": 943.3864033596899}, {"oil": 709.0000335269837, "gas": 206.08874624150914, "total": 915.0887797684927}, {"oil": 668.5800893974663, "gas": 201.70935734752229, "total": 870.2894467449886}, {"oil": 646.3251385695122, "gas": 198.3061129366766, "total": 844.6312515061888}, {"oil": 623.3595729999139, "gas": 189.26022970617336, "total": 812.6198027060873}, {"oil": 623.7388573997704, "gas": 192.25539712685767, "total": 815.9942545266281}, {"oil": 626.2615977133192, "gas": 0.0, "total": 626.2615977133192}, {"oil": 627.2762955594307, "gas": 0.0, "total": 627.2762955594307}, {"oil": 627.1696911657141, "gas": 0.0, "total": 627.1696911657141}, {"oil": 621.1800408939766, "gas": 0.0, "total": 621.1800408939766}, {"oil": 601.8699993001944, "gas": 0.0, "total": 601.8699993001944}, {"oil": 593.9574091259416, "gas": 0.0, "total": 593.9574091259416}, {"oil": 613.6267512689083, "gas": 0.0, "total": 613.6267512689083}, {"oil": 601.0829577214109, "gas": 0.0, "total": 601.0829577214109}, {"oil": 590.7461885592958, "gas": 0.0, "total": 590.7461885592958}, {"oil": 568.5347330909007, "gas": 0.0, "total": 568.5347330909007}, {"oil": 576.1801307911429, "gas": 0.0, "total": 576.1801307911429}, {"oil": 297.8561466982832, "gas": 85.78513805789453, "total": 383.64128475617775}, {"oil": 286.8256074519272, "gas": 87.40341668333612, "total": 374.2290241352634}, {"oil": 286.99532013254355, "gas": 85.30556471144078, "total": 372.3008848439843}, {"oil": 290.51573323327136, "gas": 84.31720781882001, "total": 374.83294105209137}, {"oil": 288.80852229071763, "gas": 83.77040385341019, "total": 372.5789261441278}, {"oil": 287.24467951905996, "gas": 87.47514281265295, "total": 374.7198223317129}], "Other": [{"oil": 429.62225030483705, "gas": 459.7989830167296, "total": 889.4212333215668}, {"oil": 425.95573579364793, "gas": 457.7737167432079, "total": 883.7294525368558}, {"oil": 315.3790026591448, "gas": 415.6831918639177, "total": 731.0621945230625}, {"oil": 278.37747928878576, "gas": 407.5649447104131, "total": 685.9424239991989}, {"oil": 224.1133762200676, "gas": 382.01623068870833, "total": 606.1296069087759}, {"oil": 169.37980181614756, "gas": 372.33956248188207, "total": 541.7193642980296}, {"oil": 184.88381692800868, "gas": 313.2744096469893, "total": 498.15822657499797}, {"oil": 148.02797440688997, "gas": 271.69319894474893, "total": 419.7211733516388}, {"oil": 137.22710290566113, "gas": 303.3380549019758, "total": 440.5651578076369}, {"oil": 145.50567829703698, "gas": 225.0145443252619, "total": 370.5202226222989}, {"oil": 127.67296529022735, "gas": 214.29369318601198, "total": 341.96665847623933}, {"oil": 193.97943260171783, "gas": 229.6382637334819, "total": 423.6176963351997}, {"oil": 1020.4942705323875, "gas": 670.060484813216, "total": 1690.5547553456033}, {"oil": 678.4589202469449, "gas": 712.7166655074321, "total": 1391.175585754377}, {"oil": 127.89488817256415, "gas": 212.27690334092708, "total": 340.17179151349126}, {"oil": 121.03565724577668, "gas": 197.21018740225, "total": 318.24584464802666}, {"oil": 108.72022505529974, "gas": 137.5681067514387, "total": 246.28833180673843}, {"oil": 114.12138295163831, "gas": 135.6911636784, "total": 249.8125466300383}, {"oil": 96.75465356449659, "gas": 130.12009699398385, "total": 226.87475055848046}, {"oil": 88.01134950821884, "gas": 122.26442429871288, "total": 210.27577380693174}, {"oil": 51.71116606344172, "gas": 153.63911803654497, "total": 205.35028409998668}, {"oil": 49.38602237492334, "gas": 148.00636967667194, "total": 197.3923920515953}, {"oil": 50.15027327951432, "gas": 136.15094412463327, "total": 186.30121740414756}, {"oil": 51.811592663912144, "gas": 133.93487351705997, "total": 185.7464661809721}, {"oil": 50.60642092877916, "gas": 126.371065427302, "total": 176.97748635608116}, {"oil": 49.55903979338494, "gas": 126.51440161100125, "total": 176.0734414043862}], "BORDE MONTUOSO": [{"oil": 174.8120056064516, "gas": 565.9344940451613, "total": 740.7464996516129}, {"oil": 181.71275577931033, "gas": 596.6803587724138, "total": 778.3931145517241}, {"oil": 179.21385112258062, "gas": 732.559411916129, "total": 911.7732630387096}, {"oil": 145.47405862, "gas": 619.1037560399999, "total": 764.57781466}, {"oil": 91.87328252903225, "gas": 590.753841948387, "total": 682.6271244774193}, {"oil": 52.936424419999994, "gas": 301.80011884, "total": 354.73654325999996}, {"oil": 42.960551380645164, "gas": 200.75885088387093, "total": 243.7194022645161}, {"oil": 38.81658766451613, "gas": 367.9165756838709, "total": 406.73316334838705}, {"oil": 29.488888659999994, "gas": 510.4776520799999, "total": 539.9665407399999}, {"oil": 21.347784096774195, "gas": 265.34474914838705, "total": 286.69253324516126}, {"oil": 55.096970719999995, "gas": 233.63336303999998, "total": 288.73033375999995}, {"oil": 56.806227251612896, "gas": 313.92716434838707, "total": 370.73339159999995}, {"oil": 56.801560625806445, "gas": 445.2985648064516, "total": 502.10012543225804}, {"oil": 56.801611349999995, "gas": 323.36805269999996, "total": 380.16966405}, {"oil": 56.802980903225794, "gas": 382.1242194, "total": 438.9272003032258}, {"oil": 56.802345159999994, "gas": 378.68181186, "total": 435.48415702}, {"oil": 56.80419828387097, "gas": 448.4507690903225, "total": 505.2549673741935}, {"oil": 56.01737811999999, "gas": 515.2614643, "total": 571.2788424199999}, {"oil": 43.982339535483874, "gas": 539.9933298774193, "total": 583.9756694129032}, {"oil": 2.449166961290322, "gas": 316.94484807096774, "total": 319.39401503225804}, {"oil": 0.00020966, "gas": 423.49810447999994, "total": 423.49831413999993}, {"oil": 0.0, "gas": 369.0272326258064, "total": 369.0272326258064}, {"oil": 0.0, "gas": 0.0, "total": 0.0}, {"oil": 0.0, "gas": 252.88526403870966, "total": 252.88526403870966}, {"oil": 0.0, "gas": 174.39484983870966, "total": 174.39484983870966}, {"oil": 0.0, "gas": 240.6428060142857, "total": 240.6428060142857}]}, "fields_in_chart": ["BAJADA DEL PALO OESTE", "LA AMARGA CHICA", "BAJADA DEL PALO ESTE", "AGUADA FEDERAL", "MEDANO DE LA MORA", "ENTRE LOMAS", "AGUILA MORA", "25 DE MAYO - MEDANITO SUD ESTE RN", "JAG\u00dcEL DE LOS MACHOS RN", "Other", "BORDE MONTUOSO"], "oil_pct_series": [86.23810877069968, 85.76611596101907, 86.03910559706452, 86.37063109487927, 87.68274385712029, 87.37142529884636, 87.18156254961491, 87.70335353350812, 88.51939282649545, 89.96972749246908, 89.29718285144584, 89.40169689890338, 89.16907726666446, 88.88017641093863, 89.7205671001856, 89.83324638054827, 89.76674450818086, 89.8808342226214, 89.8165628723896, 89.9420054298866, 89.3685732753133, 89.35748829370505, 89.48012150090501, 89.15375729692502, 89.00233611477869, 88.93779945858816], "operated": [{"oil": 45346.41028110272, "gas": 5928.197320905143, "total": 51274.60760200786}, {"oil": 42234.57214084985, "gas": 5647.026497120989, "total": 47881.598637970834}, {"oil": 43248.949554422674, "gas": 5644.406577008908, "total": 48893.35613143159}, {"oil": 48935.34032197433, "gas": 6231.969894685083, "total": 55167.31021665941}, {"oil": 54340.0358153919, "gas": 6361.632873089446, "total": 60701.668688481346}, {"oil": 57512.054213881056, "gas": 7057.5665344596055, "total": 64569.62074834066}, {"oil": 59448.79968719525, "gas": 7570.857093513439, "total": 67019.65678070868}, {"oil": 57411.16049546673, "gas": 6862.814934768817, "total": 64273.97543023554}, {"oil": 64733.390610452734, "gas": 7236.192727826656, "total": 71969.5833382794}, {"oil": 70594.45356896479, "gas": 8000.500546581903, "total": 78594.95411554669}, {"oil": 69440.86050466036, "gas": 8469.22597044669, "total": 77910.08647510706}, {"oil": 71174.89156777905, "gas": 8588.715343553058, "total": 79763.6069113321}, {"oil": 71153.17998438938, "gas": 8798.767103110316, "total": 79951.94708749969}, {"oil": 65441.48854812225, "gas": 8343.69031594937, "total": 73785.17886407163}, {"oil": 63485.5022786881, "gas": 7400.76622546223, "total": 70886.26850415034}, {"oil": 64615.670907734995, "gas": 7089.365871266799, "total": 71705.03677900179}, {"oil": 66401.01456420723, "gas": 7763.687609822312, "total": 74164.70217402955}, {"oil": 66271.28172694343, "gas": 7466.59664597484, "total": 73737.87837291828}, {"oil": 64828.27964777148, "gas": 7400.169855173806, "total": 72228.44950294528}, {"oil": 66282.58307934503, "gas": 7381.227753201677, "total": 73663.8108325467}, {"oil": 77431.7982738608, "gas": 8778.48810124, "total": 86210.2863751008}, {"oil": 78434.4721019938, "gas": 9066.831498677806, "total": 87501.30360067161}, {"oil": 72206.4460983668, "gas": 8023.7098620711995, "total": 80230.155960438}, {"oil": 69653.3056064276, "gas": 7821.869463710322, "total": 77475.17507013794}, {"oil": 66730.23871220903, "gas": 7555.013657067871, "total": 74285.2523692769}, {"oil": 73606.98068318571, "gas": 8464.477009607142, "total": 82071.45769279286}], "non_operated": [{"oil": 2821.3607037109755, "gas": 1758.423298447712, "total": 4579.784002158687}, {"oil": 2821.2313387476215, "gas": 1830.5078977347193, "total": 4651.739236482341}, {"oil": 2838.330588810795, "gas": 1833.816806802509, "total": 4672.147395613304}, {"oil": 2817.2602204124237, "gas": 1934.640394600607, "total": 4751.900615013031}, {"oil": 2648.2939340391704, "gas": 1643.8175017579777, "total": 4292.111435797147}, {"oil": 2563.1134811021066, "gas": 1625.6355573625594, "total": 4188.749038464666}, {"oil": 2527.829262415187, "gas": 1541.6607180845203, "total": 4069.489980499707}, {"oil": 2470.341075948576, "gas": 1533.0060348939041, "total": 4003.3471108424806}, {"oil": 2470.1881727371206, "gas": 1479.8395903766605, "total": 3950.027763113781}, {"oil": 2424.4859488114253, "gas": 140.01384627897096, "total": 2564.499795090396}, {"oil": 2385.5192979992444, "gas": 139.60786868291999, "total": 2525.1271666821644}, {"oil": 2428.5666767918333, "gas": 136.7539352570032, "total": 2565.3206120488367}, {"oil": 2423.1416756552853, "gas": 138.1814370189, "total": 2561.3231126741853}, {"oil": 2354.15681390862, "gas": 138.24172980620355, "total": 2492.3985437148235}, {"oil": 2309.6984818143537, "gas": 137.49811243676126, "total": 2447.196594251115}, {"oil": 32241.244298071797, "gas": 3872.2817693642496, "total": 36113.52606743605}, {"oil": 35856.159307109454, "gas": 3893.4554873208676, "total": 39749.614794430316}, {"oil": 39596.52483813932, "gas": 4452.45032755556, "total": 44048.97516569487}, {"oil": 39957.827919771764, "gas": 4480.52012154237, "total": 44438.348041314144}, {"oil": 38736.3217346712, "gas": 4362.779613879357, "total": 43099.10134855055}, {"oil": 40504.71664968723, "gas": 5251.42611381633, "total": 45756.14276350357}, {"oil": 45326.789055891946, "gas": 5673.182973633794, "total": 50999.97202952574}, {"oil": 43724.710393156194, "gas": 5605.928320059066, "total": 49330.63871321526}, {"oil": 44641.45712464693, "gas": 6082.970599764591, "total": 50724.427724411515}, {"oil": 43134.846857672375, "gas": 6020.577013501123, "total": 49155.4238711735}, {"oil": 41630.43357375561, "gas": 5868.904231488317, "total": 47499.33780524393}], "total": [{"oil": 48167.770984813695, "gas": 7686.620619352855, "total": 55854.39160416655}, {"oil": 45055.803479597475, "gas": 7477.534394855708, "total": 52533.33787445317}, {"oil": 46087.28014323347, "gas": 7478.223383811417, "total": 53565.50352704489}, {"oil": 51752.600542386754, "gas": 8166.61028928569, "total": 59919.21083167244}, {"oil": 56988.32974943107, "gas": 8005.4503748474235, "total": 64993.78012427849}, {"oil": 60075.16769498316, "gas": 8683.202091822164, "total": 68758.36978680533}, {"oil": 61976.62894961044, "gas": 9112.51781159796, "total": 71089.1467612084}, {"oil": 59881.501571415305, "gas": 8395.82096966272, "total": 68277.32254107803}, {"oil": 67203.57878318985, "gas": 8716.032318203317, "total": 75919.61110139318}, {"oil": 73018.93951777622, "gas": 8140.514392860874, "total": 81159.45391063708}, {"oil": 71826.3798026596, "gas": 8608.833839129611, "total": 80435.21364178923}, {"oil": 73603.45824457088, "gas": 8725.469278810062, "total": 82328.92752338093}, {"oil": 73576.32166004466, "gas": 8936.948540129217, "total": 82513.27020017388}, {"oil": 67795.64536203087, "gas": 8481.932045755573, "total": 76277.57740778645}, {"oil": 65795.20076050246, "gas": 7538.2643378989915, "total": 73333.46509840146}, {"oil": 96856.91520580678, "gas": 10961.647640631048, "total": 107818.56284643784}, {"oil": 102257.17387131669, "gas": 11657.14309714318, "total": 113914.31696845987}, {"oil": 105867.80656508275, "gas": 11919.0469735304, "total": 117786.85353861316}, {"oil": 104786.10756754325, "gas": 11880.689976716178, "total": 116666.79754425943}, {"oil": 105018.90481401622, "gas": 11744.007367081034, "total": 116762.91218109726}, {"oil": 117936.51492354803, "gas": 14029.914215056331, "total": 131966.42913860438}, {"oil": 123761.26115788575, "gas": 14740.0144723116, "total": 138501.27563019737}, {"oil": 115931.156491523, "gas": 13629.638182130266, "total": 129560.79467365326}, {"oil": 114294.76273107453, "gas": 13904.840063474912, "total": 128199.60279454946}, {"oil": 109865.0855698814, "gas": 13575.590670568992, "total": 123440.67624045041}, {"oil": 115237.41425694132, "gas": 14333.38124109546, "total": 129570.79549803678}], "non_op_detail": {"aconcagua": [{"oil": 2808.423401983533, "gas": 1611.0168932880863, "total": 4419.440295271619}, {"oil": 2807.5403666683696, "gas": 1683.2898721970366, "total": 4490.8302388654065}, {"oil": 2825.6433520720852, "gas": 1688.6720717965898, "total": 4514.315423868675}, {"oil": 2803.9436779767107, "gas": 1790.4987761231569, "total": 4594.442454099868}, {"oil": 2635.611733847666, "gas": 1499.4946724686292, "total": 4135.106406316295}, {"oil": 2550.6499745195247, "gas": 1482.8500474402294, "total": 4033.500021959754}, {"oil": 2515.6229934434627, "gas": 1398.6678101940752, "total": 3914.290803637538}, {"oil": 2458.0894164829792, "gas": 1392.7370186317687, "total": 3850.826435114748}, {"oil": 2457.4752053274724, "gas": 1339.8287426989705, "total": 3797.303948026443}, {"oil": 2411.9752557617103, "gas": 0.0, "total": 2411.9752557617103}, {"oil": 2372.9244076841383, "gas": 0.0, "total": 2372.9244076841383}, {"oil": 2416.2962202690815, "gas": 0.0, "total": 2416.2962202690815}, {"oil": 2410.776731616372, "gas": 0.0, "total": 2410.776731616372}, {"oil": 2341.9923652500715, "gas": 0.0, "total": 2341.9923652500715}, {"oil": 2297.5621149914473, "gas": 0.0, "total": 2297.5621149914473}, {"oil": 2368.9573802762025, "gas": 0.0, "total": 2368.9573802762025}, {"oil": 2313.049011037063, "gas": 0.0, "total": 2313.049011037063}, {"oil": 2308.4729961007924, "gas": 0.0, "total": 2308.4729961007924}, {"oil": 2292.2073805359337, "gas": 0.0, "total": 2292.2073805359337}, {"oil": 2269.5453221848875, "gas": 0.0, "total": 2269.5453221848875}, {"oil": 1159.865609220058, "gas": 569.4783556400712, "total": 1729.3439648601293}, {"oil": 1136.310986472839, "gas": 530.3542870848203, "total": 1666.6652735576592}, {"oil": 1067.4585400239084, "gas": 496.76775687304644, "total": 1564.2262968969549}, {"oil": 1145.6186265117205, "gas": 509.6551770235561, "total": 1655.2738035352768}, {"oil": 1115.5337094957483, "gas": 510.75245675745504, "total": 1626.2861662532032}, {"oil": 1038.8852024920423, "gas": 458.69193147625316, "total": 1497.5771339682954}], "pae": [{"oil": 12.937301727442257, "gas": 147.4064051596258, "total": 160.34370688706804}, {"oil": 13.690972079252067, "gas": 147.21802553768273, "total": 160.9089976169348}, {"oil": 12.687236738709677, "gas": 145.14473500591936, "total": 157.83197174462902}, {"oil": 13.316542435712998, "gas": 144.14161847744998, "total": 157.45816091316297}, {"oil": 12.682200191504515, "gas": 144.32282928934836, "total": 157.0050294808529}, {"oil": 12.463506582581998, "gas": 142.78550992233, "total": 155.249016504912}, {"oil": 12.206268971724192, "gas": 142.99290789044514, "total": 155.19917686216934}, {"oil": 12.251659465596774, "gas": 140.2690162621355, "total": 152.52067572773225}, {"oil": 12.712967409647998, "gas": 140.01084767768998, "total": 152.72381508733798}, {"oil": 12.510693049714837, "gas": 140.01384627897096, "total": 152.5245393286858}, {"oil": 12.594890315105998, "gas": 139.60786868291999, "total": 152.20275899802598}, {"oil": 12.270456522751934, "gas": 136.7539352570032, "total": 149.02439177975515}, {"oil": 12.364944038912903, "gas": 138.1814370189, "total": 150.54638105781288}, {"oil": 12.164448658548213, "gas": 138.24172980620355, "total": 150.40617846475178}, {"oil": 12.13636682290645, "gas": 137.49811243676126, "total": 149.63447925966773}, {"oil": 12.061045395596999, "gas": 136.62698056425, "total": 148.68802595984698}, {"oil": 11.832441201420966, "gas": 135.9492569982871, "total": 147.78169819970805}, {"oil": 11.996621238524998, "gas": 134.14515725555998, "total": 146.14177849408497}, {"oil": 11.932692558419031, "gas": 130.12009699398385, "total": 142.05278955240288}, {"oil": 10.725325873403223, "gas": 122.26442429871288, "total": 132.98975017211612}, {"oil": 9.763746767181, "gas": 114.08743477625998, "total": 123.85118154344099}, {"oil": 9.53404099975161, "gas": 109.74391483929676, "total": 119.27795583904839}, {"oil": 9.707432332289999, "gas": 107.82085168601998, "total": 117.52828401830998}, {"oil": 9.574474167464516, "gas": 105.91590309587417, "total": 115.49037726333869}, {"oil": 9.771411660503226, "gas": 103.59232761463548, "total": 113.3637392751387}, {"oil": 9.468991192143212, "gas": 102.02993701206427, "total": 111.49892820420749}], "ypf": [{"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 0, "gas": 0, "total": 0}, {"oil": 29860.2258724, "gas": 3735.6547887999996, "total": 33595.8806612}, {"oil": 33531.27785487097, "gas": 3757.5062303225804, "total": 37288.78408519355}, {"oil": 37276.0552208, "gas": 4318.3051703, "total": 41594.360391099995}, {"oil": 37653.687846677414, "gas": 4350.400024548387, "total": 42004.087871225805}, {"oil": 36456.051086612904, "gas": 4240.515189580645, "total": 40696.566276193545}, {"oil": 39335.087293699995, "gas": 4567.860323399999, "total": 43902.9476171}, {"oil": 44180.944028419355, "gas": 5033.084771709677, "total": 49214.02880012903}, {"oil": 42647.5444208, "gas": 5001.3397115, "total": 47648.884132299994}, {"oil": 43486.26402396774, "gas": 5467.399519645161, "total": 48953.6635436129}, {"oil": 42009.54173651613, "gas": 5406.232229129032, "total": 47415.77396564516}, {"oil": 40582.079380071424, "gas": 5308.182363, "total": 45890.26174307142}]}, "active_wells_total": [843, 860, 863, 844, 836, 815, 798, 812, 815, 810, 808, 808, 799, 800, 800, 1053, 1057, 1055, 1046, 1060, 1116, 1089, 1076, 1096, 1099, 1120], "active_wells_by_field": {"ENTRE LOMAS": {"data": [315, 325, 325, 320, 321, 311, 301, 308, 309, 304, 307, 307, 300, 299, 297, 289, 282, 278, 278, 275, 281, 282, 279, 284, 280, 285], "wi": "20/20%"}, "LA AMARGA CHICA": {"data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 264, 262, 260, 269, 281, 284, 284, 290, 296, 301], "wi": "50%"}, "25 DE MAYO - MEDANITO SUD ESTE RN": {"data": [175, 174, 178, 173, 168, 164, 164, 164, 161, 161, 160, 156, 154, 153, 152, 154, 154, 152, 148, 152, 152, 150, 147, 148, 145, 148], "wi": "20/20%"}, "JAG\u00dcEL DE LOS MACHOS RN": {"data": [176, 174, 176, 173, 173, 170, 167, 166, 165, 164, 156, 154, 151, 152, 153, 154, 153, 152, 148, 147, 146, 145, 141, 140, 141, 142], "wi": "20/20%"}, "BAJADA DEL PALO OESTE": {"data": [67, 71, 78, 78, 82, 82, 86, 91, 95, 98, 101, 101, 101, 101, 109, 113, 113, 116, 118, 123, 127, 127, 131, 136, 138, 148], "wi": "100%"}, "BAJADA DEL PALO ESTE": {"data": [4, 4, 4, 7, 7, 7, 7, 10, 10, 10, 10, 17, 19, 19, 19, 19, 23, 23, 23, 23, 23, 26, 26, 26, 26, 26], "wi": "100%"}, "BAJADA DEL PALO": {"data": [18, 16, 10, 9, 9, 7, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0], "wi": "100%"}, "AGUADA FEDERAL": {"data": [16, 16, 16, 16, 16, 19, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 23, 23, 20, 23, 23, 20], "wi": "100%"}, "BORDE MONTUOSO": {"data": [19, 22, 21, 20, 14, 11, 9, 11, 10, 10, 10, 9, 9, 10, 8, 9, 10, 10, 10, 10, 8, 7, 0, 4, 3, 3], "wi": "100%"}, "CHARCO DEL PALENQUE": {"data": [20, 20, 20, 19, 17, 16, 18, 18, 18, 17, 17, 18, 17, 19, 18, 17, 15, 18, 18, 18, 19, 18, 21, 18, 20, 20], "wi": "20/20%"}, "MEDANO DE LA MORA": {"data": [16, 16, 16, 16, 15, 16, 15, 13, 16, 16, 16, 16, 16, 16, 15, 15, 16, 16, 16, 16, 17, 16, 16, 16, 16, 16], "wi": "100%"}, "COIRON AMARGO NORTE": {"data": [5, 8, 4, 3, 3, 2, 1, 2, 3, 2, 3, 2, 1, 1, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0], "wi": "96.77%"}}, "new_wells_total": [{"period_str": "2024-02", "new_wells": 34}, {"period_str": "2024-03", "new_wells": 31}, {"period_str": "2024-04", "new_wells": 15}, {"period_str": "2024-05", "new_wells": 9}, {"period_str": "2024-06", "new_wells": 5}, {"period_str": "2024-07", "new_wells": 17}, {"period_str": "2024-08", "new_wells": 18}, {"period_str": "2024-09", "new_wells": 13}, {"period_str": "2024-10", "new_wells": 11}, {"period_str": "2024-11", "new_wells": 6}, {"period_str": "2024-12", "new_wells": 11}, {"period_str": "2025-01", "new_wells": 4}, {"period_str": "2025-02", "new_wells": 9}, {"period_str": "2025-03", "new_wells": 13}, {"period_str": "2025-04", "new_wells": 19}, {"period_str": "2025-05", "new_wells": 15}, {"period_str": "2025-06", "new_wells": 5}, {"period_str": "2025-07", "new_wells": 2}, {"period_str": "2025-08", "new_wells": 16}, {"period_str": "2025-09", "new_wells": 37}, {"period_str": "2025-10", "new_wells": 4}, {"period_str": "2025-11", "new_wells": 11}, {"period_str": "2025-12", "new_wells": 7}, {"period_str": "2026-01", "new_wells": 7}, {"period_str": "2026-02", "new_wells": 19}], "new_by_field_table": [{"period_str": "2024-02", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 2, "avg_ip": 1.3, "total_ip": 2.6367002139987648}, {"period_str": "2024-02", "field_display": "AGUADA DEL PONCHO", "new_wells": 2, "avg_ip": 23.5, "total_ip": 47.09650417241379}, {"period_str": "2024-02", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 4, "avg_ip": 240.5, "total_ip": 961.9743747103448}, {"period_str": "2024-02", "field_display": "BORDE MONTUOSO", "new_wells": 4, "avg_ip": 17.6, "total_ip": 70.43968708965517}, {"period_str": "2024-02", "field_display": "COIRON AMARGO NORTE", "new_wells": 3, "avg_ip": 0.0, "total_ip": 0.0037779141475862065}, {"period_str": "2024-02", "field_display": "ENTRE LOMAS", "new_wells": 11, "avg_ip": 1.4, "total_ip": 15.202668929247725}, {"period_str": "2024-03", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 6, "avg_ip": 1.8, "total_ip": 10.590782494017043}, {"period_str": "2024-03", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 7, "avg_ip": 97.1, "total_ip": 679.4205438580644}, {"period_str": "2024-03", "field_display": "BORDE MONTUOSO", "new_wells": 1, "avg_ip": 2.0, "total_ip": 1.981287}, {"period_str": "2024-03", "field_display": "ENTRE LOMAS", "new_wells": 5, "avg_ip": 2.4, "total_ip": 12.088255667928}, {"period_str": "2024-03", "field_display": "JARILLA QUEMADA", "new_wells": 1, "avg_ip": 19.9, "total_ip": 19.944349936435277}, {"period_str": "2024-04", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 1, "avg_ip": 3.8, "total_ip": 3.8053845428756077}, {"period_str": "2024-04", "field_display": "BAJADA DEL PALO ESTE", "new_wells": 3, "avg_ip": 122.4, "total_ip": 367.08048541999995}, {"period_str": "2024-04", "field_display": "ENTRE LOMAS", "new_wells": 2, "avg_ip": 0.8, "total_ip": 1.6418208985100557}, {"period_str": "2024-05", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 4, "avg_ip": 230.0, "total_ip": 920.0695092387097}, {"period_str": "2024-05", "field_display": "ENTRE LOMAS", "new_wells": 4, "avg_ip": 3.8, "total_ip": 15.092371130658176}, {"period_str": "2024-05", "field_display": "JARILLA QUEMADA", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.031260425952572904}, {"period_str": "2024-06", "field_display": "AGUADA FEDERAL", "new_wells": 3, "avg_ip": 166.7, "total_ip": 500.1110133799999}, {"period_str": "2024-06", "field_display": "ENTRE LOMAS", "new_wells": 1, "avg_ip": 0.8, "total_ip": 0.7509519072686399}, {"period_str": "2024-07", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 1, "avg_ip": 1.2, "total_ip": 1.1622593691391276}, {"period_str": "2024-07", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 4, "avg_ip": 412.6, "total_ip": 1650.3333470516127}, {"period_str": "2024-07", "field_display": "BORDE MONTUOSO", "new_wells": 1, "avg_ip": 2.0, "total_ip": 2.037692303225806}, {"period_str": "2024-08", "field_display": "BAJADA DEL PALO ESTE", "new_wells": 3, "avg_ip": 23.1, "total_ip": 69.24542268387096}, {"period_str": "2024-08", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 5, "avg_ip": 258.8, "total_ip": 1294.102408180645}, {"period_str": "2024-08", "field_display": "ENTRE LOMAS", "new_wells": 2, "avg_ip": 43.1, "total_ip": 86.19066070821529}, {"period_str": "2024-09", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 4, "avg_ip": 403.9, "total_ip": 1615.6263320999997}, {"period_str": "2024-09", "field_display": "COIRON AMARGO NORTE", "new_wells": 1, "avg_ip": 16.5, "total_ip": 16.534558981072}, {"period_str": "2024-09", "field_display": "ENTRE LOMAS", "new_wells": 2, "avg_ip": 0.1, "total_ip": 0.17190983458299197}, {"period_str": "2024-10", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 3, "avg_ip": 190.8, "total_ip": 572.4099445935483}, {"period_str": "2024-10", "field_display": "BORDE MONTUOSO", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.00040579354838709674}, {"period_str": "2024-11", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 2, "avg_ip": 0.2, "total_ip": 0.418983513059848}, {"period_str": "2024-11", "field_display": "BAJADA DEL PALO", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.0008386399999999999}, {"period_str": "2024-11", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 3, "avg_ip": 380.6, "total_ip": 1141.81695606}, {"period_str": "2024-12", "field_display": "BAJADA DEL PALO ESTE", "new_wells": 7, "avg_ip": 528.2, "total_ip": 3697.1907004645163}, {"period_str": "2024-12", "field_display": "BANDURRIA NORTE", "new_wells": 1, "avg_ip": 100.6, "total_ip": 100.62604647096774}, {"period_str": "2024-12", "field_display": "CHARCO DEL PALENQUE", "new_wells": 1, "avg_ip": 0.9, "total_ip": 0.9470201741326452}, {"period_str": "2024-12", "field_display": "ENTRE LOMAS", "new_wells": 2, "avg_ip": 2.9, "total_ip": 5.829666360391394}, {"period_str": "2025-01", "field_display": "BAJADA DEL PALO ESTE", "new_wells": 2, "avg_ip": 13.4, "total_ip": 26.71014294193548}, {"period_str": "2025-01", "field_display": "BANDURRIA NORTE", "new_wells": 2, "avg_ip": 390.2, "total_ip": 780.3631092967742}, {"period_str": "2025-02", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.027629808550362855}, {"period_str": "2025-02", "field_display": "BANDURRIA NORTE", "new_wells": 1, "avg_ip": 146.5, "total_ip": 146.51235484285712}, {"period_str": "2025-02", "field_display": "CHARCO DEL PALENQUE", "new_wells": 1, "avg_ip": 0.1, "total_ip": 0.06880590670611428}, {"period_str": "2025-03", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 8, "avg_ip": 440.5, "total_ip": 3523.8442182580643}, {"period_str": "2025-03", "field_display": "ENTRE LOMAS", "new_wells": 1, "avg_ip": 0.8, "total_ip": 0.7913313222695845}, {"period_str": "2025-04", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 1, "avg_ip": 0.1, "total_ip": 0.07345024482752001}, {"period_str": "2025-04", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 4, "avg_ip": 133.5, "total_ip": 533.82538968}, {"period_str": "2025-04", "field_display": "LA AMARGA CHICA", "new_wells": 14, "avg_ip": 84.4, "total_ip": 1181.6144076}, {"period_str": "2025-05", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 1, "avg_ip": 2.9, "total_ip": 2.8845110410827095}, {"period_str": "2025-05", "field_display": "BAJADA DEL PALO ESTE", "new_wells": 4, "avg_ip": 375.6, "total_ip": 1502.3300922193548}, {"period_str": "2025-05", "field_display": "LA AMARGA CHICA", "new_wells": 10, "avg_ip": 83.1, "total_ip": 831.3573584516129}, {"period_str": "2025-06", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 4, "avg_ip": 395.6, "total_ip": 1582.31995416}, {"period_str": "2025-06", "field_display": "ENTRE LOMAS", "new_wells": 1, "avg_ip": 0.1, "total_ip": 0.070504082044704}, {"period_str": "2025-07", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 2, "avg_ip": 59.2, "total_ip": 118.37626786451614}, {"period_str": "2025-08", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 6, "avg_ip": 518.3, "total_ip": 3110.0883917612905}, {"period_str": "2025-08", "field_display": "BORDE MONTUOSO", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.00020289677419354837}, {"period_str": "2025-08", "field_display": "ENTRE LOMAS", "new_wells": 2, "avg_ip": 1.1, "total_ip": 2.2320611537000588}, {"period_str": "2025-08", "field_display": "LA AMARGA CHICA", "new_wells": 7, "avg_ip": 418.6, "total_ip": 2930.496949741935}, {"period_str": "2025-09", "field_display": "AGUADA DEL PONCHO", "new_wells": 2, "avg_ip": 0.0, "total_ip": 0.0010482999999999998}, {"period_str": "2025-09", "field_display": "AGUADA FEDERAL", "new_wells": 4, "avg_ip": 577.3, "total_ip": 2309.3461952}, {"period_str": "2025-09", "field_display": "BAJADA DEL PALO", "new_wells": 12, "avg_ip": 0.0, "total_ip": 0.00482218}, {"period_str": "2025-09", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 3, "avg_ip": 664.1, "total_ip": 1992.4392347199996}, {"period_str": "2025-09", "field_display": "BORDE MONTUOSO", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.00020966}, {"period_str": "2025-09", "field_display": "ENTRE LOMAS", "new_wells": 2, "avg_ip": 0.0, "total_ip": 0.0004107092638}, {"period_str": "2025-09", "field_display": "JAG\u00dcEL DE LOS ROSAUROS", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.00020966}, {"period_str": "2025-09", "field_display": "LA AMARGA CHICA", "new_wells": 10, "avg_ip": 295.4, "total_ip": 2953.994087}, {"period_str": "2025-09", "field_display": "MEDANO DE LA MORA", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.0025159199999999996}, {"period_str": "2025-09", "field_display": "MEDANO DE LA MORA ESTE", "new_wells": 1, "avg_ip": 0.0, "total_ip": 0.00020966}, {"period_str": "2025-10", "field_display": "BAJADA DEL PALO ESTE", "new_wells": 3, "avg_ip": 307.6, "total_ip": 922.692761632258}, {"period_str": "2025-10", "field_display": "ENTRE LOMAS", "new_wells": 1, "avg_ip": 0.1, "total_ip": 0.12386259740971742}, {"period_str": "2025-11", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 5, "avg_ip": 324.4, "total_ip": 1621.7823690199998}, {"period_str": "2025-11", "field_display": "LA AMARGA CHICA", "new_wells": 6, "avg_ip": 20.8, "total_ip": 124.61666249999999}, {"period_str": "2025-12", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 4, "avg_ip": 440.8, "total_ip": 1763.2182137225805}, {"period_str": "2025-12", "field_display": "ENTRE LOMAS", "new_wells": 1, "avg_ip": 3.2, "total_ip": 3.240612098830026}, {"period_str": "2025-12", "field_display": "LA AMARGA CHICA", "new_wells": 2, "avg_ip": 373.1, "total_ip": 746.2837555161291}, {"period_str": "2026-01", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 3, "avg_ip": 33.9, "total_ip": 101.62490729032257}, {"period_str": "2026-01", "field_display": "LA AMARGA CHICA", "new_wells": 4, "avg_ip": 5.2, "total_ip": 20.812136612903224}, {"period_str": "2026-02", "field_display": "25 DE MAYO - MEDANITO SUD ESTE RN", "new_wells": 1, "avg_ip": 0.2, "total_ip": 0.15955084836254144}, {"period_str": "2026-02", "field_display": "BAJADA DEL PALO OESTE", "new_wells": 9, "avg_ip": 429.5, "total_ip": 3865.939309885714}, {"period_str": "2026-02", "field_display": "ENTRE LOMAS", "new_wells": 2, "avg_ip": 0.3, "total_ip": 0.5636396076721457}, {"period_str": "2026-02", "field_display": "LA AMARGA CHICA", "new_wells": 7, "avg_ip": 13.2, "total_ip": 92.16578721428571}]};
+
+const C = {
+  p900:'#0D0D38',p700:'#001EAF',p500:'#2044DC',p400:'#4571FF',p200:'#88AAFF',
+  orange:'#FF6B06',red:'#F8485E',cyan:'#46E8E0',green:'#0aa86a',
+  grid:'rgba(136,170,255,.10)',tick:'#88AAFF',
+};
+const PALETTE = ['#2044DC','#FF6B06','#46E8E0','#4571FF','#88AAFF','#F8485E','#0aa86a','#b983ff','#f9c846','#ff86b1','#6dd3ce','#c2c4e2','#e2735a','#7aa5ff','#5c9c66','#d88fff'];
+
+Chart.defaults.font.family = "'Inter',system-ui,sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = C.tick;
+Chart.defaults.borderColor = C.grid;
+
+function fmt(n,d){d=d||0;if(n==null||!isFinite(n))return '–';return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+
+const labels = D.months;
+const last = D.total.length-1;
+
+// Header
+document.getElementById('hdr-window').textContent = labels[0]+' → '+labels[last];
+document.querySelectorAll('.hdr-latest').forEach(e=>e.textContent=labels[last]);
+document.getElementById('kpi-total').textContent = fmt(D.total[last].total);
+document.getElementById('kpi-growth').textContent = ((D.total[last].total/D.total[0].total-1)*100).toFixed(1)+'%';
+document.getElementById('kpi-op').textContent = fmt(D.operated[last].total);
+document.getElementById('kpi-nonop').textContent = fmt(D.non_operated[last].total);
+document.getElementById('kpi-oilmix').textContent = (D.total[last].oil/D.total[last].total*100).toFixed(1);
+document.getElementById('kpi-oilvol').textContent = fmt(D.total[last].oil);
+document.getElementById('kpi-gasvol').textContent = fmt(D.total[last].gas);
+document.getElementById('kpi-active').textContent = fmt(D.active_wells_total[last]);
+
+const ttBase = {backgroundColor:'#0D0D38',borderColor:C.p500,borderWidth:1,titleColor:'#fff',bodyColor:C.p200,padding:12};
+
+// ===== CHART 1: Production by field (stacked) + %oil line =====
+const fieldDatasets = D.fields_in_chart.map((f,i) => ({
+  type:'bar', label:f, stack:'prod',
+  data: D.production_by_field[f].map(r=>r.total),
+  backgroundColor: PALETTE[i%PALETTE.length],
+  borderWidth:0, order:2,
+}));
+fieldDatasets.push({
+  type:'line', label:'% Oil in total', yAxisID:'y1',
+  data: D.oil_pct_series,
+  borderColor: C.orange, backgroundColor: C.orange,
+  borderWidth:2.5, pointRadius:2, pointHoverRadius:5, tension:.3, order:1,
+});
+new Chart(document.getElementById('chart1'),{
+  data:{labels, datasets:fieldDatasets},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{position:'bottom',labels:{usePointStyle:true,padding:12,font:{size:11}},maxWidth:800},
+      tooltip:{...ttBase,
+        itemSort:(a,b)=>b.parsed.y-a.parsed.y,
+        filter:i=>i.parsed.y>0,
+        callbacks:{
+          label:ctx=>{
+            if(ctx.dataset.yAxisID==='y1') return '% oil: '+ctx.parsed.y.toFixed(1)+'%';
+            return ctx.dataset.label+': '+fmt(ctx.parsed.y);
+          },
+          footer:items=>{const bars=items.filter(i=>i.dataset.type==='bar');return 'Total: '+fmt(bars.reduce((s,i)=>s+i.parsed.y,0))+' boe/d';}
+        }
+      }
+    },
+    scales:{
+      x:{stacked:true,grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:14}},
+      y:{stacked:true,grid:{color:C.grid},title:{display:true,text:'Net Production (boe/d)',color:C.p200,font:{size:12,weight:'600'}},ticks:{callback:v=>fmt(v)}},
+      y1:{position:'right',grid:{display:false},min:70,max:100,title:{display:true,text:'% Oil',color:C.orange,font:{size:12,weight:'600'}},ticks:{callback:v=>v.toFixed(0)+'%'}}
+    }
+  }
+});
+
+// ===== CHART 2: Operated =====
+new Chart(document.getElementById('chart2'),{
+  data:{labels,datasets:[
+    {type:'bar',label:'Oil',stack:'op',data:D.operated.map(r=>r.oil),backgroundColor:C.p500},
+    {type:'bar',label:'Gas',stack:'op',data:D.operated.map(r=>r.gas),backgroundColor:C.cyan},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{usePointStyle:true,padding:14}},
+      tooltip:{...ttBase,callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y)+' boe/d'}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
+      y:{stacked:true,grid:{color:C.grid},ticks:{callback:v=>fmt(v)},title:{display:true,text:'boe/d',color:C.p200}}}
+  }
+});
+
+// ===== CHART 3: Non-Op (oil+gas) — FIXED: same labels as Chart 2 =====
+new Chart(document.getElementById('chart3'),{
+  data:{labels,datasets:[
+    {type:'bar',label:'Oil',stack:'no',data:D.non_operated.map(r=>r.oil),backgroundColor:C.orange},
+    {type:'bar',label:'Gas',stack:'no',data:D.non_operated.map(r=>r.gas),backgroundColor:C.cyan},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{usePointStyle:true,padding:14}},
+      tooltip:{...ttBase,callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y)+' boe/d'}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
+      y:{stacked:true,grid:{color:C.grid},ticks:{callback:v=>fmt(v)},title:{display:true,text:'boe/d',color:C.p200}}}
+  }
+});
+
+// ===== CHART 4: Non-Op by partner (FIXED alignment — all series use same labels) =====
+new Chart(document.getElementById('chart4'),{
+  data:{labels,datasets:[
+    {type:'bar',label:'Aconcagua (5 concessions)',stack:'p',data:D.non_op_detail.aconcagua.map(r=>r.total),backgroundColor:C.orange},
+    {type:'bar',label:'PAE · Acambuco (1.5%)',stack:'p',data:D.non_op_detail.pae.map(r=>r.total),backgroundColor:C.cyan},
+    {type:'bar',label:'YPF · La Amarga Chica (50%)',stack:'p',data:D.non_op_detail.ypf.map(r=>r.total),backgroundColor:C.p400},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{usePointStyle:true,padding:14}},
+      tooltip:{...ttBase,callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y)+' boe/d'}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:14}},
+      y:{stacked:true,grid:{color:C.grid},ticks:{callback:v=>fmt(v)},title:{display:true,text:'Net Non-Op boe/d',color:C.p200}}}
+  }
+});
+
+// ===== CHART 5: Active wells by field (line) =====
+const awFields = Object.keys(D.active_wells_by_field);
+const awDatasets = awFields.map((f,i) => ({
+  type:'line', label: f+' (WI: '+D.active_wells_by_field[f].wi+')',
+  data: D.active_wells_by_field[f].data,
+  borderColor: PALETTE[i%PALETTE.length],
+  backgroundColor: PALETTE[i%PALETTE.length],
+  borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:.3, fill:false,
+}));
+new Chart(document.getElementById('chart5'),{
+  data:{labels, datasets:awDatasets},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{usePointStyle:true,padding:10,font:{size:11}},maxWidth:800},
+      tooltip:{...ttBase, mode:'nearest', intersect:false,
+        callbacks:{label:ctx=>ctx.dataset.label.split(' (WI')[0]+': '+fmt(ctx.parsed.y)+' wells'}}},
+    scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:14}},
+      y:{grid:{color:C.grid},beginAtZero:true,title:{display:true,text:'# active wells',color:C.p200}}}
+  }
+});
+
+// ===== CHART 6a: Active wells total =====
+new Chart(document.getElementById('chart6a'),{
+  data:{labels,datasets:[{
+    type:'line',label:'Active wells',data:D.active_wells_total,
+    borderColor:C.p400,backgroundColor:'rgba(69,113,255,.18)',
+    fill:true,tension:.3,pointRadius:3,pointHoverRadius:5,borderWidth:2.5,
+  }]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...ttBase,callbacks:{label:ctx=>'Active: '+fmt(ctx.parsed.y)}}},
+    scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
+      y:{grid:{color:C.grid},ticks:{callback:v=>fmt(v)},title:{display:true,text:'# wells',color:C.p200}}}
+  }
+});
+
+// ===== CHART 6b: New wells stacked by field =====
+// Pivot new_by_field_table
+const newPivot = {};
+const newFieldTotals = {};
+D.new_by_field_table.forEach(r => {
+  if(!newPivot[r.period_str]) newPivot[r.period_str]={};
+  newPivot[r.period_str][r.field_display]=r.new_wells;
+  newFieldTotals[r.field_display]=(newFieldTotals[r.field_display]||0)+r.new_wells;
+});
+const newPeriods = [...new Set(D.new_by_field_table.map(r=>r.period_str))].sort();
+const newFieldsSorted = Object.keys(newFieldTotals).sort((a,b)=>newFieldTotals[b]-newFieldTotals[a]);
+
+new Chart(document.getElementById('chart6b'),{
+  data:{labels:newPeriods, datasets:newFieldsSorted.map((f,i)=>({
+    type:'bar',label:f,stack:'nw',
+    data:newPeriods.map(p=>(newPivot[p]||{})[f]||0),
+    backgroundColor:PALETTE[i%PALETTE.length],
+  }))},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{usePointStyle:true,padding:10,font:{size:11}},maxWidth:600},
+      tooltip:{...ttBase,itemSort:(a,b)=>b.parsed.y-a.parsed.y,filter:i=>i.parsed.y>0,
+        callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y),
+          footer:items=>'Total: '+fmt(items.reduce((s,i)=>s+i.parsed.y,0))}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
+      y:{stacked:true,grid:{color:C.grid},beginAtZero:true,title:{display:true,text:'# new wells',color:C.p200}}}
+  }
+});
+
+// ===== TABLE: New wells with avg IP =====
+const tbody = document.querySelector('#newTable tbody');
+const tdata = [...D.new_by_field_table].sort((a,b)=>a.period_str===b.period_str? b.new_wells-a.new_wells : a.period_str.localeCompare(b.period_str));
+tdata.forEach(r=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${r.period_str}</td><td>${r.field_display}</td><td class="num">${fmt(r.new_wells)}</td><td class="num">${fmt(r.avg_ip,1)}</td><td class="num">${fmt(r.total_ip,0)}</td>`;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>
